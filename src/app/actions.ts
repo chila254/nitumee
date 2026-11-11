@@ -1,78 +1,103 @@
 "use server";
 
-import { randomInt } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import {
+  SESSION_COOKIE,
+  currentUser,
+  normalizePhone,
+  setSessionCookie,
+} from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { AREAS, nextAvailableSlot, slotBounds, parseSlotDay } from "@/lib/slots";
-
-const OTP_COOKIE = "n_otp";
-const SESSION_COOKIE = "n_session";
-const OTP_TTL_MS = 5 * 60 * 1000;
-
-function normalizePhone(raw: string): string | null {
-  let digits = raw.replace(/[\s-]/g, "");
-  if (/^\+?254\d{9}$/.test(digits)) digits = `0${digits.slice(-9)}`;
-  else if (/^[17]\d{8}$/.test(digits)) digits = `0${digits}`;
-  return /^0[17]\d{8}$/.test(digits) ? digits : null;
-}
 
 export type FormState = { error?: string; field?: string; ok?: boolean };
 
-export async function requestOtp(_prev: FormState, formData: FormData): Promise<FormState> {
-  const phone = normalizePhone(String(formData.get("phone") ?? ""));
-  const name = String(formData.get("name") ?? "").trim();
-  if (!phone) return { error: "Enter a valid Kenyan number, e.g. 0712 345 678." };
-  if (name.length < 2) return { error: "Tell us your name so the runner can greet you." };
+/** Signs the user in and redirects. The cookie is written after the redirect
+ *  throw is caught: Next 16 forbids mutating the request cookie jar and then
+ *  redirecting within one action (the redirect emits its own cookie header). */
+async function finishSignIn(user: { id: string; role: string }): Promise<never> {
+  const target = user.role === "runner" ? "/runner" : "/bookings";
+  try {
+    redirect(target);
+  } catch (err) {
+    await setSessionCookie(user.id);
+    throw err;
+  }
+}
 
-  const code = String(randomInt(100000, 1000000));
-  const jar = await cookies();
-  jar.set(OTP_COOKIE, JSON.stringify({ phone, name, code, expires: Date.now() + OTP_TTL_MS }), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: OTP_TTL_MS / 1000,
-    path: "/",
+const emailSchema = z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address."));
+const passwordSchema = z
+  .string()
+  .min(8, "Use at least 8 characters.")
+  .max(200, "That password is too long.");
+
+async function emailTaken(email: string, exceptUserId?: string) {
+  const other = await prisma.user.findUnique({ where: { email } });
+  return other != null && other.id !== exceptUserId;
+}
+
+export async function signUp(_prev: FormState, formData: FormData): Promise<FormState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = emailSchema.safeParse(String(formData.get("email") ?? ""));
+  const password = passwordSchema.safeParse(String(formData.get("password") ?? ""));
+  const confirm = String(formData.get("confirm") ?? "");
+  const phoneRaw = String(formData.get("phone") ?? "").trim();
+  const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
+
+  if (name.length < 2) return { error: "Tell us your name so the runner can greet you.", field: "name" };
+  if (!email.success) return { error: email.error.issues[0].message, field: "email" };
+  if (phoneRaw && !phone) return { error: "Enter a valid Kenyan number, e.g. 0712 345 678.", field: "phone" };
+  if (!password.success) return { error: password.error.issues[0].message, field: "password" };
+  if (confirm !== password.data) return { error: "The two passwords do not match.", field: "confirm" };
+  if (await emailTaken(email.data)) return { error: "An account with that email already exists. Sign in instead.", field: "email" };
+
+  const user = await prisma.user.create({
+    data: { name, email: email.data, phone, passwordHash: await hashPassword(password.data) },
   });
 
-  // TODO: send via Africa's Talking once AT_API_KEY is set.
-  console.log(`[otp] ${phone} -> ${code}`);
+  return finishSignIn(user);
+}
+
+export async function signIn(_prev: FormState, formData: FormData): Promise<FormState> {
+  const email = emailSchema.safeParse(String(formData.get("email") ?? ""));
+  const password = String(formData.get("password") ?? "");
+  if (!email.success || password.length === 0) return { error: "Enter your email and password." };
+
+  const user = await prisma.user.findUnique({ where: { email: email.data } });
+  // Same message for unknown email and wrong password so the form cannot be
+  // used to discover which addresses have accounts.
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    return { error: "Wrong email or password." };
+  }
+
+  return finishSignIn(user);
+}
+
+/** Saves the delivery number (and name) from the profile card. */
+export async function updateProfile(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await currentUser();
+  if (!user) redirect("/login");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = normalizePhone(String(formData.get("phone") ?? ""));
+  if (name.length < 2) return { error: "Tell us your name so the runner can greet you.", field: "name" };
+  if (!phone) return { error: "Enter a valid Kenyan number, e.g. 0712 345 678.", field: "phone" };
+
+  await prisma.user.update({ where: { id: user.id }, data: { name, phone } });
+  revalidatePath("/profile");
+  revalidatePath("/book");
   return { ok: true };
 }
 
-export async function verifyOtp(_prev: FormState, formData: FormData): Promise<FormState> {
-  const code = String(formData.get("code") ?? "").trim();
-  const jar = await cookies();
-  const pending = jar.get(OTP_COOKIE)?.value;
-  if (!pending) return { error: "Request a new code." };
-
-  let otp: { phone: string; name: string; code: string; expires: number };
-  try {
-    otp = JSON.parse(pending);
-  } catch {
-    return { error: "Request a new code." };
-  }
-  if (otp.expires < Date.now()) return { error: "That code expired. Request a new one." };
-  if (code !== otp.code) return { error: "Wrong code. Check the SMS and try again." };
-
-  const user = await prisma.user.upsert({
-    where: { phone: otp.phone },
-    update: { name: otp.name },
-    create: { phone: otp.phone, name: otp.name },
-  });
-
-  jar.delete(OTP_COOKIE);
-  jar.set(SESSION_COOKIE, user.id, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-  });
-
-  redirect(user.role === "runner" ? "/runner" : "/bookings");
+export async function removePasskey(id: string) {
+  const user = await currentUser();
+  if (!user) redirect("/login");
+  await prisma.webAuthnCredential.deleteMany({ where: { id, userId: user.id } });
+  revalidatePath("/profile");
 }
 
 export async function signOut() {
@@ -99,6 +124,8 @@ export type BookingInput = {
   slot: string;
   budget: string;
   notes: string;
+  /** Delivery number for this run; falls back to the profile number. */
+  phone?: string;
 };
 
 export async function createBooking(_prev: FormState, payload: unknown): Promise<FormState> {
@@ -107,6 +134,11 @@ export async function createBooking(_prev: FormState, payload: unknown): Promise
 
   const parsed = bookingSchema.safeParse(payload);
   if (!parsed.success) return { error: parsed.error.issues[0].message, field: String(parsed.error.issues[0].path[0]) };
+
+  const rawPhone = payload && typeof payload === "object" ? (payload as BookingInput).phone : undefined;
+  const phoneRaw = typeof rawPhone === "string" ? rawPhone.trim() : "";
+  const phone = phoneRaw ? normalizePhone(phoneRaw) : user.phone;
+  if (!phone) return { error: "Add a delivery phone number so the runner can reach you.", field: "phone" };
 
   const day = parseSlotDay(parsed.data.day);
   const bounds = day && slotBounds(day, parsed.data.slot);
@@ -117,6 +149,10 @@ export async function createBooking(_prev: FormState, payload: unknown): Promise
       error: `That slot has already started. ${next ? `Try ${next.dayLabel}, ${next.slotLabel}.` : "Pick a later day."}`,
       field: "slot",
     };
+  }
+
+  if (phone !== user.phone) {
+    await prisma.user.update({ where: { id: user.id }, data: { phone } });
   }
 
   const conflict = await prisma.booking.findFirst({
@@ -163,9 +199,3 @@ export async function cancelBooking(id: string) {
   revalidatePath("/runner");
 }
 
-export async function currentUser() {
-  const jar = await cookies();
-  const id = jar.get(SESSION_COOKIE)?.value;
-  if (!id) return null;
-  return prisma.user.findUnique({ where: { id }, include: { runnerProfile: true } });
-}

@@ -327,14 +327,6 @@ export type RunnerNullableScalarRelationFilter = {
   isNot?: Prisma.RunnerWhereInput | null
 }
 
-export type StringNullableListFilter<$PrismaModel = never> = {
-  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
-  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
-  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
-  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
-  isEmpty?: boolean
-}
-
 export type RunnerCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   areas?: Prisma.SortOrder
@@ -416,10 +408,6 @@ export type FloatFieldUpdateOperationsInput = {
   decrement?: number
   multiply?: number
   divide?: number
-}
-
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
 }
 
 export type RunnerCreateNestedOneWithoutBookingsInput = {

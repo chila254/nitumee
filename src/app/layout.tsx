@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { currentUser, signOut } from "./actions";
+import { signOut } from "./actions";
+import { currentUser } from "@/lib/auth";
 
 // Session-aware header: render at request time instead of prerendering a shell.
 export const instant = false;
@@ -34,15 +35,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                       Book now
                     </Link>
                   )}
-                  <span className="hidden text-stone-500 sm:inline">{user.name}</span>
+                  <Link href="/profile" className="hidden text-stone-500 hover:text-stone-900 sm:inline">
+                    {user.name}
+                  </Link>
                   <form action={signOut}>
                     <button className="rounded-lg px-3 py-2 text-stone-500 hover:text-stone-900">Sign out</button>
                   </form>
                 </>
               ) : (
-                <Link href="/login" className="btn !px-4 !py-2">
-                  Sign in
-                </Link>
+                <>
+                  <Link href="/login" className="rounded-lg px-3 py-2 text-stone-600 hover:text-stone-900">
+                    Sign in
+                  </Link>
+                  <Link href="/login?mode=signup" className="btn !px-4 !py-2">
+                    Create account
+                  </Link>
+                </>
               )}
             </div>
           </nav>

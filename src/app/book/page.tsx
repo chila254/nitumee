@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@/app/actions";
+import { currentUser } from "@/lib/auth";
 import { BookingForm } from "./booking-form";
 
 export default async function BookPage() {
@@ -14,7 +14,7 @@ export default async function BookPage() {
           Give us your list and a slot. The first runner available in your area will take it.
         </p>
       </div>
-      <BookingForm />
+      <BookingForm defaultPhone={user.phone ?? ""} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { currentUser } from "@/app/actions";
+import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatSlot } from "@/lib/slots";
 import { StatusBadge } from "@/components/status-badge";

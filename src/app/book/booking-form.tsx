@@ -6,7 +6,7 @@ import { AREAS, SLOTS, firstAvailableSlot, slotAvailable, upcomingDays } from "@
 
 const initial: FormState = {};
 
-export function BookingForm() {
+export function BookingForm({ defaultPhone = "" }: { defaultPhone?: string }) {
   const [state, action, pending] = useActionState(createBooking, initial);
   const formRef = useRef<HTMLFormElement>(null);
   const days = upcomingDays(7);
@@ -37,6 +37,7 @@ export function BookingForm() {
       slot,
       budget: String(data.get("budget") ?? ""),
       notes: String(data.get("notes") ?? ""),
+      phone: String(data.get("phone") ?? ""),
     };
     startTransition(() => action(payload));
   }
@@ -103,7 +104,17 @@ export function BookingForm() {
         </label>
         <label className="block space-y-1 text-sm font-medium">
           Delivery phone
-          <input className="field bg-stone-50" value="Same as your account" readOnly disabled />
+          <input
+            name="phone"
+            className="field"
+            defaultValue={defaultPhone}
+            placeholder="0712 345 678"
+            inputMode="tel"
+            autoComplete="tel"
+          />
+          <span className="block text-xs font-normal text-stone-400">
+            {defaultPhone ? "From your profile — change it here for this run." : "The runner calls this number."}
+          </span>
         </label>
       </div>
 

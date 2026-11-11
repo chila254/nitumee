@@ -23,14 +23,33 @@ enum BookingStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  phone     String   @unique
-  name      String
-  role      Role     @default(customer)
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role      @default(customer)
+  createdAt    DateTime  @default(now())
 
-  customerBookings Booking[] @relation("customer")
+  customerBookings Booking[]       @relation("customer")
   runnerProfile    Runner?
+  credentials      WebAuthnCredential[]
+}
+
+// One passkey (platform authenticator, security key or phone) per row.
+model WebAuthnCredential {
+  id           String   @id
+  userId       String
+  publicKey    Bytes
+  counter      Int      @default(0)
+  transports   String[]
+  deviceName   String   @default("Passkey")
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Runner {
