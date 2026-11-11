@@ -1,0 +1,99 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  customer
+  runner
+  admin
+}
+
+enum BookingStatus {
+  pending
+  accepted
+  shopping
+  delivered
+  cancelled
+}
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String
+  role      Role     @default(customer)
+  createdAt DateTime @default(now())
+
+  customerBookings Booking[] @relation("customer")
+  runnerProfile    Runner?
+}
+
+model Runner {
+  userId      String   @id
+  areas       String[]
+  active      Boolean  @default(false)
+  rating      Float    @default(0)
+  activeSince DateTime?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[] @relation("runner")
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  customerId   String
+  runnerId     String?
+  area         String
+  notes        String
+  budgetKes    Int
+  slotStart    DateTime
+  slotEnd      DateTime
+  status       BookingStatus @default(pending)
+  items        BookingItem[]
+  payment      Payment?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  customer User   @relation("customer", fields: [customerId], references: [id], onDelete: Cascade)
+  runner   Runner? @relation("runner", fields: [runnerId], references: [userId])
+
+  @@index([status, slotStart])
+  @@index([runnerId, slotStart])
+  @@index([customerId, createdAt])
+}
+
+model BookingItem {
+  id        String  @id @default(cuid())
+  bookingId String
+  name      String
+  quantity  Int     @default(1)
+  maxPriceKes Int?
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  bookingId     String        @unique
+  amountKes     Int
+  status        PaymentStatus @default(pending)
+  checkoutId    String?
+  mpesaReceipt  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
