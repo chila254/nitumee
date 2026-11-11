@@ -43,7 +43,7 @@ export function BookingForm({ defaultPhone = "" }: { defaultPhone?: string }) {
   }
 
   return (
-    <form ref={formRef} onSubmit={submit} className="card space-y-5">
+    <form ref={formRef} onSubmit={submit} method="post" className="card space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1 text-sm font-medium">
           Area

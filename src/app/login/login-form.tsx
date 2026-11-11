@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore, useTransition } from "react";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import { signIn, signUp, type FormState } from "@/app/actions";
 import { passkeysSupported, signInWithPasskey } from "@/lib/passkeys-client";
 
@@ -9,27 +9,25 @@ const subscribeNever = () => () => {};
 
 export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
   const [tab, setTab] = useState<"signin" | "signup">(mode);
-  const [state, setState] = useState<FormState>(initial);
-  const [pending, startTransition] = useTransition();
+  // Each tab owns its own action state so switching tabs never shows the
+  // other form's error.
+  const [signInState, signInAction, signInPending] = useActionState(signIn, initial);
+  const [signUpState, signUpAction, signUpPending] = useActionState(signUp, initial);
+  const isSignUp = tab === "signup";
+  const state = isSignUp ? signUpState : signInState;
+  const pending = isSignUp ? signUpPending : signInPending;
+
+  // Keep what was typed after a rejected submit: React clears uncontrolled
+  // inputs when a form action returns, and retyping an email to fix a typo is
+  // the fastest way to lose a sign-up.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
   const [passkeyError, setPasskeyError] = useState("");
   const [passkeyPending, setPasskeyPending] = useState(false);
-
   // Read browser support outside render so the server-rendered HTML and the
   // hydrated client agree (passkeys are unknown until hydration).
   const canPasskey = useSyncExternalStore(subscribeNever, passkeysSupported, () => false);
-
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    setState(initial);
-    startTransition(async () => {
-      const action = tab === "signin" ? signIn : signUp;
-      const result = await action(initial, formData);
-      setState(result);
-      if (tab === "signup") form.reset();
-    });
-  }
 
   async function passkey() {
     setPasskeyError("");
@@ -44,7 +42,6 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
 
   function switchTab(next: "signin" | "signup") {
     setTab(next);
-    setState(initial);
     setPasskeyError("");
   }
 
@@ -65,18 +62,39 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
         ))}
       </div>
 
-      <form onSubmit={submit} className="space-y-4" noValidate>
-        {tab === "signup" && (
+      {/* A real form action, not an onSubmit handler: the browser POSTs the
+          action id, so submitting before the client bundle loads (slow network,
+          stale tab after a deploy) still reaches the server instead of falling
+          back to a GET that puts the password in the URL. */}
+      <form key={tab} action={isSignUp ? signUpAction : signInAction} className="space-y-4">
+        {isSignUp && (
           <label className="block space-y-1 text-sm font-medium">
             Your name
-            <input name="name" className="field" placeholder="Wanjiku" autoComplete="name" required />
+            <input
+              name="name"
+              className="field"
+              placeholder="Wanjiku"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </label>
         )}
         <label className="block space-y-1 text-sm font-medium">
           Email
-          <input name="email" type="email" className="field" placeholder="you@example.com" autoComplete="email" required />
+          <input
+            name="email"
+            type="email"
+            className="field"
+            placeholder="you@example.com"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </label>
-        {tab === "signup" && (
+        {isSignUp && (
           <label className="block space-y-1 text-sm font-medium">
             Delivery phone <span className="font-normal text-stone-400">(optional)</span>
             <input name="phone" className="field" placeholder="0712 345 678" inputMode="tel" autoComplete="tel" />
@@ -88,13 +106,13 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             name="password"
             type="password"
             className="field"
-            placeholder={tab === "signup" ? "At least 8 characters" : "Your password"}
-            autoComplete={tab === "signup" ? "new-password" : "current-password"}
-            minLength={tab === "signup" ? 8 : undefined}
+            placeholder={isSignUp ? "At least 8 characters" : "Your password"}
+            autoComplete={isSignUp ? "new-password" : "current-password"}
+            minLength={isSignUp ? 8 : undefined}
             required
           />
         </label>
-        {tab === "signup" && (
+        {isSignUp && (
           <label className="block space-y-1 text-sm font-medium">
             Confirm password
             <input name="confirm" type="password" className="field" autoComplete="new-password" minLength={8} required />
@@ -108,7 +126,7 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
         )}
 
         <button className="btn w-full" disabled={pending}>
-          {pending ? "Please wait…" : tab === "signin" ? "Sign in" : "Create account"}
+          {pending ? "Please wait…" : isSignUp ? "Create account" : "Sign in"}
         </button>
       </form>
 
@@ -127,7 +145,7 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
               {passkeyError}
             </p>
           )}
-          {tab === "signup" && (
+          {isSignUp && (
             <p className="text-xs text-stone-500">
               Already created an account? After your first password sign-in you can add a passkey in your profile for one-tap
               login.
