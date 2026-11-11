@@ -23,15 +23,13 @@ export function normalizePhone(raw: string): string | null {
   return /^0[17]\d{8}$/.test(digits) ? digits : null;
 }
 
+/** Writes the session cookie. Callers must not redirect in the same action
+ *  before this: Next 16 needs the Set-Cookie attached to the action response
+ *  the browser then follows. */
 export async function startSession(userId: string) {
-  await setSessionCookie(userId);
-  // A fresh sign-in proves who owns any previously registered passkeys.
-  await clearChallenge();
-}
-
-export async function setSessionCookie(userId: string) {
   const jar = await cookies();
   jar.set(SESSION_COOKIE, userId, { ...cookieBase, maxAge: SESSION_TTL_S });
+  if (jar.get(CHALLENGE_COOKIE)) jar.delete(CHALLENGE_COOKIE);
 }
 
 export async function currentUser() {

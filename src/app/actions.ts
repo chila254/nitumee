@@ -9,25 +9,12 @@ import {
   SESSION_COOKIE,
   currentUser,
   normalizePhone,
-  setSessionCookie,
+  startSession,
 } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { AREAS, nextAvailableSlot, slotBounds, parseSlotDay } from "@/lib/slots";
 
 export type FormState = { error?: string; field?: string; ok?: boolean };
-
-/** Signs the user in and redirects. The cookie is written after the redirect
- *  throw is caught: Next 16 forbids mutating the request cookie jar and then
- *  redirecting within one action (the redirect emits its own cookie header). */
-async function finishSignIn(user: { id: string; role: string }): Promise<never> {
-  const target = user.role === "runner" ? "/runner" : "/bookings";
-  try {
-    redirect(target);
-  } catch (err) {
-    await setSessionCookie(user.id);
-    throw err;
-  }
-}
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address."));
 const passwordSchema = z
@@ -59,7 +46,8 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
     data: { name, email: email.data, phone, passwordHash: await hashPassword(password.data) },
   });
 
-  return finishSignIn(user);
+  await startSession(user.id);
+  redirect(user.role === "runner" ? "/runner" : "/bookings");
 }
 
 export async function signIn(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -74,7 +62,8 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
     return { error: "Wrong email or password." };
   }
 
-  return finishSignIn(user);
+  await startSession(user.id);
+  redirect(user.role === "runner" ? "/runner" : "/bookings");
 }
 
 /** Saves the delivery number (and name) from the profile card. */
