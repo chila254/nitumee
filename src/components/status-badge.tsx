@@ -11,7 +11,7 @@ const styles: Record<BookingStatus, string> = {
 };
 
 const labels: Record<BookingStatus, string> = {
-  pending: "Waiting for a runner",
+  pending: "Awaiting runner",
   accepted: "Runner accepted",
   shopping: "Shopping now",
   delivered: "Delivered",

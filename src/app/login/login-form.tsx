@@ -3,11 +3,19 @@
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { signIn, signUp, type FormState } from "@/app/actions";
 import { passkeysSupported, signInWithPasskey } from "@/lib/passkeys-client";
+import { AREAS } from "@/lib/slots";
+import { VEHICLES } from "@/lib/vetting";
 
 const initial: FormState = {};
 const subscribeNever = () => () => {};
 
-export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
+export function LoginForm({
+  mode = "signin",
+  defaultRole = "customer",
+}: {
+  mode?: "signin" | "signup";
+  defaultRole?: "customer" | "runner";
+}) {
   const [tab, setTab] = useState<"signin" | "signup">(mode);
   // Each tab owns its own action state so switching tabs never shows the
   // other form's error.
@@ -22,6 +30,8 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
   // the fastest way to lose a sign-up.
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"customer" | "runner">(defaultRole);
+  const [vehicle, setVehicle] = useState("bike");
 
   const [passkeyError, setPasskeyError] = useState("");
   const [passkeyPending, setPasskeyPending] = useState(false);
@@ -81,6 +91,84 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
             />
           </label>
         )}
+        {isSignUp && (
+          <>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">I&apos;m signing up as</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(
+                  [
+                    { id: "customer", title: "Customer", copy: "Book a shopper" },
+                    { id: "runner", title: "Runner", copy: "Shop for customers" },
+                  ] as const
+                ).map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-xl border border-stone-300 px-3 py-2 text-sm has-checked:border-accent has-checked:bg-accent/5"
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value={option.id}
+                      checked={role === option.id}
+                      onChange={() => setRole(option.id)}
+                      className="accent-teal-700"
+                    />
+                    <span>
+                      <span className="font-medium">{option.title}</span>
+                      <span className="block text-xs text-stone-500">{option.copy}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            {role === "runner" && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block space-y-1 text-sm font-medium">
+                    How you get around
+                    <select name="vehicle" className="field" value={vehicle} onChange={(e) => setVehicle(e.target.value)}>
+                      {VEHICLES.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {vehicle !== "foot" && (
+                    <label className="block space-y-1 text-sm font-medium">
+                      Number plate
+                      <input name="plate" className="field uppercase" placeholder="KDA 123X" required />
+                    </label>
+                  )}
+                </div>
+                <label className="block space-y-1 text-sm font-medium">
+                  National ID number
+                  <input name="idNumber" className="field" placeholder="12345678" inputMode="numeric" required />
+                  <span className="block text-xs font-normal text-stone-500">
+                    Only Nitumee admins can see this — it is used for vetting.
+                  </span>
+                </label>
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">Areas you can serve</legend>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {AREAS.map((area) => (
+                      <label key={area} className="flex items-center gap-2 rounded-lg border border-stone-200 px-3 py-2">
+                        <input type="checkbox" name="areas" value={area} className="accent-teal-700" />
+                        {area}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Every runner is vetted before taking jobs. Applications are reviewed by a person, so you may wait a
+                  little before your first run.
+                </p>
+              </>
+            )}
+          </>
+        )}
         <label className="block space-y-1 text-sm font-medium">
           Email
           <input
@@ -96,8 +184,16 @@ export function LoginForm({ mode = "signin" }: { mode?: "signin" | "signup" }) {
         </label>
         {isSignUp && (
           <label className="block space-y-1 text-sm font-medium">
-            Delivery phone <span className="font-normal text-stone-400">(optional)</span>
-            <input name="phone" className="field" placeholder="0712 345 678" inputMode="tel" autoComplete="tel" />
+            {role === "runner" ? "Phone" : "Delivery phone"}{" "}
+            <span className="font-normal text-stone-400">{role === "runner" ? "(required)" : "(optional)"}</span>
+            <input
+              name="phone"
+              className="field"
+              placeholder="0712 345 678"
+              inputMode="tel"
+              autoComplete="tel"
+              required={role === "runner"}
+            />
           </label>
         )}
         <label className="block space-y-1 text-sm font-medium">

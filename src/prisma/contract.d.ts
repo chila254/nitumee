@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'7e330cd7dd48529e74516ca1dcb5b05050a9cba758dc79339ed70648796cf2b2'>;
+  StorageHashBase<'4e3ce9b733129df5be9235548fdc60b09f2a7aaf23b69778f9457da67bd18caf'>;
 export type ExecutionHash =
-  ExecutionHashBase<'807cc242c0486c2c94da1f61452de4a33be5b3f9c3fec4a2b688b93f4063ebcd'>;
+  ExecutionHashBase<'93e9ed4c566988612732dc139582e1c6447a4b2b80fd62939cd89f9372f72d14'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -290,6 +290,16 @@ type FieldTypeOverrides = {
           readonly input: 'pending' | 'paid' | 'failed';
         };
       };
+      readonly Runner: {
+        readonly status: {
+          readonly output: 'pending' | 'approved' | 'rejected';
+          readonly input: 'pending' | 'approved' | 'rejected';
+        };
+        readonly vehicleType: {
+          readonly output: 'bike' | 'car' | 'foot';
+          readonly input: 'bike' | 'car' | 'foot';
+        };
+      };
       readonly User: {
         readonly role: {
           readonly output: 'customer' | 'runner' | 'admin';
@@ -329,6 +339,16 @@ type ColumnTypeOverrides = {
         readonly input: 'pending' | 'paid' | 'failed';
       };
     };
+    readonly Runner: {
+      readonly status: {
+        readonly output: 'pending' | 'approved' | 'rejected';
+        readonly input: 'pending' | 'approved' | 'rejected';
+      };
+      readonly vehicleType: {
+        readonly output: 'bike' | 'car' | 'foot';
+        readonly input: 'bike' | 'car' | 'foot';
+      };
+    };
     readonly User: {
       readonly role: {
         readonly output: 'customer' | 'runner' | 'admin';
@@ -354,12 +374,14 @@ export type StorageColumnInputTypes = ColumnTypesFromStorage<
 
 export namespace Models {
   export type public_Booking = {
+    acceptedAt: FieldOutputTypes['public']['Booking']['acceptedAt'];
     area: FieldOutputTypes['public']['Booking']['area'];
     budgetKes: FieldOutputTypes['public']['Booking']['budgetKes'];
     createdAt: FieldOutputTypes['public']['Booking']['createdAt'];
     customerId: FieldOutputTypes['public']['Booking']['customerId'];
     id: FieldOutputTypes['public']['Booking']['id'];
     notes: FieldOutputTypes['public']['Booking']['notes'];
+    respondBy: FieldOutputTypes['public']['Booking']['respondBy'];
     runnerId: FieldOutputTypes['public']['Booking']['runnerId'];
     slotEnd: FieldOutputTypes['public']['Booking']['slotEnd'];
     slotStart: FieldOutputTypes['public']['Booking']['slotStart'];
@@ -395,9 +417,15 @@ export namespace Models {
   export type public_Runner = {
     active: FieldOutputTypes['public']['Runner']['active'];
     activeSince: FieldOutputTypes['public']['Runner']['activeSince'];
+    approvedAt: FieldOutputTypes['public']['Runner']['approvedAt'];
     areas: FieldOutputTypes['public']['Runner']['areas'];
+    createdAt: FieldOutputTypes['public']['Runner']['createdAt'];
+    idNumber: FieldOutputTypes['public']['Runner']['idNumber'];
+    plateNumber: FieldOutputTypes['public']['Runner']['plateNumber'];
     rating: FieldOutputTypes['public']['Runner']['rating'];
+    status: FieldOutputTypes['public']['Runner']['status'];
     userId: FieldOutputTypes['public']['Runner']['userId'];
+    vehicleType: FieldOutputTypes['public']['Runner']['vehicleType'];
     bookings: public_Booking[];
     user: public_User;
     readonly [RelationKeys]?: 'bookings' | 'user';
@@ -460,6 +488,13 @@ type ContractBase = Omit<
           readonly table: {
             readonly Booking: {
               columns: {
+                readonly acceptedAt: {
+                  readonly dataType: 'pg/timestamp';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
                 readonly area: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -496,6 +531,13 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly respondBy: {
+                  readonly dataType: 'pg/timestamp';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
                   readonly many: false;
                 };
                 readonly runnerId: {
@@ -746,11 +788,38 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly precision: 3 };
                   readonly many: false;
                 };
+                readonly approvedAt: {
+                  readonly dataType: 'pg/timestamp';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
                 readonly areas: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
                   readonly many: { readonly elementNullable: true };
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamp';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                  readonly typeParams: { readonly precision: 3 };
+                  readonly many: false;
+                };
+                readonly idNumber: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly plateNumber: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
                 };
                 readonly rating: {
                   readonly dataType: 'pg/float8';
@@ -762,10 +831,28 @@ type ContractBase = Omit<
                   };
                   readonly many: false;
                 };
+                readonly status: {
+                  readonly dataType: 'pg/enum';
+                  readonly codecId: 'pg/enum@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/enum@1', 'pending'>;
+                  };
+                  readonly typeParams: { readonly typeName: 'RunnerStatus' };
+                  readonly many: false;
+                };
                 readonly userId: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly vehicleType: {
+                  readonly dataType: 'pg/enum';
+                  readonly codecId: 'pg/enum@1';
+                  readonly nullable: true;
+                  readonly typeParams: { readonly typeName: 'VehicleType' };
                   readonly many: false;
                 };
               };
@@ -956,6 +1043,14 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['customer', 'runner', 'admin'];
             };
+            readonly RunnerStatus: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['pending', 'approved', 'rejected'];
+            };
+            readonly VehicleType: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['bike', 'car', 'foot'];
+            };
           };
         };
       };
@@ -986,6 +1081,14 @@ type ContractBase = Omit<
         readonly models: {
           readonly Booking: {
             readonly fields: {
+              readonly acceptedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
               readonly area: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -1013,6 +1116,14 @@ type ContractBase = Omit<
               readonly notes: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly respondBy: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
               };
               readonly runnerId: {
                 readonly nullable: true;
@@ -1101,12 +1212,14 @@ type ContractBase = Omit<
               readonly table: 'Booking';
               readonly namespaceId: 'public';
               readonly fields: {
+                readonly acceptedAt: { readonly column: 'acceptedAt' };
                 readonly area: { readonly column: 'area' };
                 readonly budgetKes: { readonly column: 'budgetKes' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly customerId: { readonly column: 'customerId' };
                 readonly id: { readonly column: 'id' };
                 readonly notes: { readonly column: 'notes' };
+                readonly respondBy: { readonly column: 'respondBy' };
                 readonly runnerId: { readonly column: 'runnerId' };
                 readonly slotEnd: { readonly column: 'slotEnd' };
                 readonly slotStart: { readonly column: 'slotStart' };
@@ -1254,18 +1367,58 @@ type ContractBase = Omit<
                   readonly typeParams: { readonly precision: 3 };
                 };
               };
+              readonly approvedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
               readonly areas: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
                 readonly many: { readonly elementNullable: true };
               };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamp-date@1';
+                  readonly typeParams: { readonly precision: 3 };
+                };
+              };
+              readonly idNumber: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly plateNumber: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly rating: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
               };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/enum@1';
+                  readonly typeParams: { readonly typeName: 'RunnerStatus' };
+                };
+              };
               readonly userId: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly vehicleType: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/enum@1';
+                  readonly typeParams: { readonly typeName: 'VehicleType' };
+                };
               };
             };
             readonly relations: {
@@ -1296,9 +1449,15 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly active: { readonly column: 'active' };
                 readonly activeSince: { readonly column: 'activeSince' };
+                readonly approvedAt: { readonly column: 'approvedAt' };
                 readonly areas: { readonly column: 'areas' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly idNumber: { readonly column: 'idNumber' };
+                readonly plateNumber: { readonly column: 'plateNumber' };
                 readonly rating: { readonly column: 'rating' };
+                readonly status: { readonly column: 'status' };
                 readonly userId: { readonly column: 'userId' };
+                readonly vehicleType: { readonly column: 'vehicleType' };
               };
             };
           };
@@ -1577,6 +1736,18 @@ type ContractBase = Omit<
           readonly ref: {
             readonly entry: 'Payment';
             readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: {
+            readonly id: 'timestampNow';
+            readonly kind: 'generator';
+            readonly params: { readonly precision: 3 };
+          };
+          readonly ref: {
+            readonly entry: 'Runner';
+            readonly field: 'createdAt';
             readonly namespace: 'public';
           };
         },

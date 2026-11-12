@@ -8,6 +8,18 @@ enum Role {
   admin
 }
 
+enum RunnerStatus {
+  pending
+  approved
+  rejected
+}
+
+enum VehicleType {
+  bike
+  car
+  foot
+}
+
 enum BookingStatus {
   pending
   accepted
@@ -49,9 +61,17 @@ model WebAuthnCredential {
 model Runner {
   userId      String   @id
   areas       String[]
+  status      RunnerStatus @default(pending)
+  vehicleType VehicleType?
+  // Vetting details: idNumber is only ever shown to admins; the plate is shown
+  // to a customer once this runner has accepted their booking.
+  idNumber    String?
+  plateNumber String?
   active      Boolean  @default(false)
   rating      Float    @default(0)
   activeSince DateTime?
+  createdAt   DateTime @default(now())
+  approvedAt  DateTime?
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings Booking[] @relation("runner")
@@ -67,6 +87,10 @@ model Booking {
   slotStart    DateTime
   slotEnd      DateTime
   status       BookingStatus @default(pending)
+  // Set when a booking is offered to a specific runner; that offer is released
+  // back to the open queue when respondBy passes or the runner declines.
+  respondBy    DateTime?
+  acceptedAt   DateTime?
   items        BookingItem[]
   payment      Payment?
   createdAt    DateTime      @default(now())

@@ -45,7 +45,11 @@ export default async function BookingsPage() {
                   </div>
                   <p className="text-sm text-stone-600">{formatSlot(booking.slotStart, booking.slotEnd)}</p>
                   <p className="truncate text-sm text-stone-500">
-                    {booking.runner ? `Runner: ${booking.runner.user.name}` : "Waiting for a runner"}
+                    {booking.runner
+                      ? booking.status === "pending"
+                        ? `Offered to ${booking.runner.user.name}`
+                        : `Runner: ${booking.runner.user.name}`
+                      : "Waiting for a runner"}
                   </p>
                 </div>
                 <span className="font-semibold text-accent">KES {booking.budgetKes.toLocaleString("en-KE")}</span>

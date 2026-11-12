@@ -4,6 +4,7 @@ import { cancelBooking } from "@/app/actions";
 import { currentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { formatSlot } from "@/lib/slots";
+import { vehicleLabel } from "@/lib/vetting";
 import { StatusBadge } from "@/components/status-badge";
 
 export default async function BookingPage({ params }: PageProps<"/bookings/[id]">) {
@@ -50,6 +51,36 @@ export default async function BookingPage({ params }: PageProps<"/bookings/[id]"
             </dd>
           </div>
         </dl>
+        {booking.runner && booking.status === "pending" ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            We&apos;ve asked <strong>{booking.runner.user.name}</strong> to take this run
+            {booking.respondBy
+              ? `, and they have until ${booking.respondBy.toLocaleTimeString("en-KE", {
+                  timeZone: "Africa/Nairobi",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })} to accept`
+              : ""}
+            . If they can&apos;t, it goes back to other vetted runners in {booking.area}.
+          </p>
+        ) : booking.runner ? (
+          <div className="rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-900">
+            <p>
+              <strong>{booking.runner.user.name}</strong> is your runner ·{" "}
+              <span className="rounded-full bg-teal-700 px-2 py-0.5 text-xs font-medium text-white">Vetted by Nitumee</span>
+            </p>
+            <p className="mt-1 text-xs text-teal-800">
+              {vehicleLabel(booking.runner.vehicleType)}
+              {booking.runner.plateNumber ? ` · plate ${booking.runner.plateNumber}` : ""} · name and national ID checked
+              before approval.
+            </p>
+          </div>
+        ) : (
+          <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-600">
+            We&apos;re matching you with a vetted runner. Every runner&apos;s name, national ID and vehicle are checked
+            before they can take jobs.
+          </p>
+        )}
         <div>
           <h2 className="mb-1 text-sm text-stone-500">Your list</h2>
           <p className="whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm leading-relaxed">{booking.notes}</p>

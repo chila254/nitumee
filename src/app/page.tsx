@@ -21,6 +21,10 @@ export default function Home() {
           Book a trusted runner for a time that suits you. They shop from your list, stay within budget and
           deliver to your door — while you get on with your day.
         </p>
+        <p className="mx-auto max-w-2xl rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-900">
+          Every runner is vetted before their first job: we check their name, national ID, phone and vehicle — plate
+          included — so the person at your gate is accountable.
+        </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/book" className="btn">
             Book a shopping run

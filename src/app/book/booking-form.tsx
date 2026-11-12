@@ -1,8 +1,9 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
-import { createBooking, type BookingInput, type FormState } from "@/app/actions";
+import { createBooking, listRunnerOptions, type BookingInput, type FormState, type RunnerOption } from "@/app/actions";
 import { AREAS, SLOTS, firstAvailableSlot, slotAvailable, upcomingDays } from "@/lib/slots";
+import { vehicleLabel } from "@/lib/vetting";
 
 const initial: FormState = {};
 
@@ -11,15 +12,33 @@ export function BookingForm({ defaultPhone = "" }: { defaultPhone?: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const days = upcomingDays(7);
 
+  const [area, setArea] = useState<string>(AREAS[0]);
   const [day, setDay] = useState(days[0].value);
   const [slot, setSlot] = useState(() => firstAvailableSlot(days[0].value) ?? SLOTS[0].id);
+  const [runners, setRunners] = useState<RunnerOption[]>([]);
+  const [runnerId, setRunnerId] = useState("");
+  const slotKey = `${area}|${day}|${slot}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const checkingRunners = loadedKey !== slotKey;
 
   useEffect(() => {
-    if (state.field === "slot") {
-      const next = firstAvailableSlot(day);
-      if (next) setSlot(next);
-    }
-  }, [state, day]);
+    let cancelled = false;
+    listRunnerOptions({ area, day, slot })
+      .then((options) => {
+        if (cancelled) return;
+        setRunners(options);
+        setRunnerId((current) => (options.some((option) => option.userId === current) ? current : ""));
+      })
+      .catch(() => {
+        if (!cancelled) setRunners([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedKey(slotKey);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [area, day, slot, slotKey]);
 
   function changeDay(value: string) {
     setDay(value);
@@ -32,12 +51,13 @@ export function BookingForm({ defaultPhone = "" }: { defaultPhone?: string }) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const payload: BookingInput = {
-      area: String(data.get("area") ?? ""),
+      area,
       day,
       slot,
       budget: String(data.get("budget") ?? ""),
       notes: String(data.get("notes") ?? ""),
       phone: String(data.get("phone") ?? ""),
+      runnerId,
     };
     startTransition(() => action(payload));
   }
@@ -47,7 +67,7 @@ export function BookingForm({ defaultPhone = "" }: { defaultPhone?: string }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1 text-sm font-medium">
           Area
-          <select name="area" className="field" defaultValue={AREAS[0]}>
+          <select name="area" value={area} onChange={(e) => setArea(e.target.value)} className="field">
             {AREAS.map((area) => (
               <option key={area}>{area}</option>
             ))}
@@ -95,6 +115,60 @@ export function BookingForm({ defaultPhone = "" }: { defaultPhone?: string }) {
             );
           })}
         </div>
+      </fieldset>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Runner</legend>
+        <p className="text-xs text-stone-500">
+          Every runner is vetted by Nitumee — ID, phone and vehicle — before they can take a job. Pick one, or leave it
+          open and the best available runner in your area gets it.
+        </p>
+        {checkingRunners ? (
+          <p className="text-sm text-stone-500">Checking who is free for this slot…</p>
+        ) : (
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm has-checked:border-accent has-checked:bg-accent/5">
+              <span className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="runner"
+                  value=""
+                  checked={runnerId === ""}
+                  onChange={() => setRunnerId("")}
+                  className="accent-teal-700"
+                />
+                Any available runner
+              </span>
+              <span className="text-xs text-stone-500">Fastest to fill</span>
+            </label>
+            {runners.map((option) => (
+              <label
+                key={option.userId}
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm has-checked:border-accent has-checked:bg-accent/5"
+              >
+                <span className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="runner"
+                    value={option.userId}
+                    checked={runnerId === option.userId}
+                    onChange={() => setRunnerId(option.userId)}
+                    className="accent-teal-700"
+                  />
+                  {option.name}
+                </span>
+                <span className="text-xs text-stone-500">
+                  {vehicleLabel(option.vehicleType)} · {option.isNew ? "New, vetting passed" : `★ ${option.rating.toFixed(1)}`}
+                </span>
+              </label>
+            ))}
+            {runners.length === 0 && (
+              <p className="text-sm text-stone-500">
+                No vetted runners are free for this slot yet. Leave it open — the queue will offer it to one.
+              </p>
+            )}
+          </div>
+        )}
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">

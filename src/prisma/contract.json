@@ -35,6 +35,16 @@
         "models": {
           "Booking": {
             "fields": {
+              "acceptedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamp-date@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
               "area": {
                 "nullable": false,
                 "type": {
@@ -78,6 +88,16 @@
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
+                }
+              },
+              "respondBy": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamp-date@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
                 }
               },
               "runnerId": {
@@ -195,6 +215,9 @@
             },
             "storage": {
               "fields": {
+                "acceptedAt": {
+                  "column": "acceptedAt"
+                },
                 "area": {
                   "column": "area"
                 },
@@ -212,6 +235,9 @@
                 },
                 "notes": {
                   "column": "notes"
+                },
+                "respondBy": {
+                  "column": "respondBy"
                 },
                 "runnerId": {
                   "column": "runnerId"
@@ -447,10 +473,44 @@
                   }
                 }
               },
+              "approvedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamp-date@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
               "areas": {
                 "many": {
                   "elementNullable": true
                 },
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamp-date@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "idNumber": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "plateNumber": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
@@ -464,11 +524,31 @@
                   "kind": "scalar"
                 }
               },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/enum@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "typeName": "RunnerStatus"
+                  }
+                }
+              },
               "userId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
+                }
+              },
+              "vehicleType": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/enum@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "typeName": "VehicleType"
+                  }
                 }
               }
             },
@@ -513,14 +593,32 @@
                 "activeSince": {
                   "column": "activeSince"
                 },
+                "approvedAt": {
+                  "column": "approvedAt"
+                },
                 "areas": {
                   "column": "areas"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "idNumber": {
+                  "column": "idNumber"
+                },
+                "plateNumber": {
+                  "column": "plateNumber"
                 },
                 "rating": {
                   "column": "rating"
                 },
+                "status": {
+                  "column": "status"
+                },
                 "userId": {
                   "column": "userId"
+                },
+                "vehicleType": {
+                  "column": "vehicleType"
                 }
               },
               "namespaceId": "public",
@@ -815,11 +913,37 @@
                 "admin"
               ],
               "typeName": "Role"
+            },
+            "RunnerStatus": {
+              "kind": "postgres-enum",
+              "members": [
+                "pending",
+                "approved",
+                "rejected"
+              ],
+              "typeName": "RunnerStatus"
+            },
+            "VehicleType": {
+              "kind": "postgres-enum",
+              "members": [
+                "bike",
+                "car",
+                "foot"
+              ],
+              "typeName": "VehicleType"
             }
           },
           "table": {
             "Booking": {
               "columns": {
+                "acceptedAt": {
+                  "codecId": "pg/timestamp-date@1",
+                  "dataType": "pg/timestamp",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
                 "area": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -856,6 +980,14 @@
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": false
+                },
+                "respondBy": {
+                  "codecId": "pg/timestamp-date@1",
+                  "dataType": "pg/timestamp",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
                 },
                 "runnerId": {
                   "codecId": "pg/text@1",
@@ -1177,12 +1309,42 @@
                     "precision": 3
                   }
                 },
+                "approvedAt": {
+                  "codecId": "pg/timestamp-date@1",
+                  "dataType": "pg/timestamp",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
                 "areas": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "many": {
                     "elementNullable": true
                   },
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamp-date@1",
+                  "dataType": "pg/timestamp",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "idNumber": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "plateNumber": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
                   "nullable": true
                 },
                 "rating": {
@@ -1194,10 +1356,42 @@
                   },
                   "nullable": false
                 },
+                "status": {
+                  "codecId": "pg/enum@1",
+                  "dataType": "pg/enum",
+                  "default": {
+                    "kind": "literal",
+                    "value": "pending"
+                  },
+                  "nullable": false,
+                  "typeParams": {
+                    "typeName": "RunnerStatus"
+                  },
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "RunnerStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "userId": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": false
+                },
+                "vehicleType": {
+                  "codecId": "pg/enum@1",
+                  "dataType": "pg/enum",
+                  "nullable": true,
+                  "typeParams": {
+                    "typeName": "VehicleType"
+                  },
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "VehicleType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 }
               },
               "foreignKeys": [
@@ -1436,6 +1630,22 @@
                 "runner",
                 "admin"
               ]
+            },
+            "RunnerStatus": {
+              "kind": "valueSet",
+              "values": [
+                "pending",
+                "approved",
+                "rejected"
+              ]
+            },
+            "VehicleType": {
+              "kind": "valueSet",
+              "values": [
+                "bike",
+                "car",
+                "foot"
+              ]
             }
           }
         },
@@ -1443,10 +1653,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7e330cd7dd48529e74516ca1dcb5b05050a9cba758dc79339ed70648796cf2b2"
+    "storageHash": "4e3ce9b733129df5be9235548fdc60b09f2a7aaf23b69778f9457da67bd18caf"
   },
   "execution": {
-    "executionHash": "807cc242c0486c2c94da1f61452de4a33be5b3f9c3fec4a2b688b93f4063ebcd",
+    "executionHash": "93e9ed4c566988612732dc139582e1c6447a4b2b80fd62939cd89f9372f72d14",
     "mutations": {
       "defaults": [
         {
@@ -1549,6 +1759,20 @@
           "ref": {
             "entry": "Payment",
             "field": "updatedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator",
+            "params": {
+              "precision": 3
+            }
+          },
+          "ref": {
+            "entry": "Runner",
+            "field": "createdAt",
             "namespace": "public"
           }
         },

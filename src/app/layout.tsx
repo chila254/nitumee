@@ -27,10 +27,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <div className="flex items-center gap-2 text-sm">
               {user ? (
                 <>
-                  <Link href={user.role === "runner" ? "/runner" : "/bookings"} className="btn-secondary !px-4 !py-2">
-                    {user.role === "runner" ? "Runner queue" : "My bookings"}
+                  <Link
+                    href={user.role === "admin" ? "/admin" : user.role === "runner" ? "/runner" : "/bookings"}
+                    className="btn-secondary !px-4 !py-2"
+                  >
+                    {user.role === "admin" ? "Admin" : user.role === "runner" ? "Runner queue" : "My bookings"}
                   </Link>
-                  {user.role !== "runner" && (
+                  {user.role === "customer" && (
                     <Link href="/book" className="btn !px-4 !py-2">
                       Book now
                     </Link>

@@ -18,6 +18,15 @@ export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
+/** Comma-separated allowlist; those emails become admins on signup or sign-in. */
+export function isAdminEmail(email: string): boolean {
+  return (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(email.trim().toLowerCase());
+}
+
 export function normalizePhone(raw: string): string | null {
   let digits = raw.replace(/[\s-]/g, "");
   if (/^\+?254\d{9}$/.test(digits)) digits = `0${digits.slice(-9)}`;
