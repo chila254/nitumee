@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
-    "build": "prisma contract emit && prisma db migrate && next build",
-    "build:webpack": "prisma contract emit && prisma db migrate && next build --webpack",
+    "build": "prisma contract emit && next build",
+    "build:webpack": "prisma contract emit && next build --webpack",
+    "vercel-build": "prisma contract emit && prisma db migrate && next build",
     "start": "next start",
     "lint": "eslint",
     "db": "node scripts/pglite-server.cjs",
