@@ -1,12 +1,25 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma/client";
+import postgres, { type PostgresClient } from "@prisma/orm-postgres/runtime";
+import { contractFromJson } from "@prisma/orm-postgres/static";
+import type { Contract } from "@/prisma/contract";
+import contractJson from "@/prisma/contract.json";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+export const contract = contractFromJson<Contract>(contractJson);
+export type Db = PostgresClient<Contract>;
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+const globalForDb = globalThis as unknown as {
+  nitumeeDb?: Db;
+};
+
+/** Prisma Compute wires its `service.load().db.client` here so the app and the
+ *  platform share one pool; everywhere else the client comes from DATABASE_URL. */
+export function setDatabaseClient(client: Db) {
+  globalForDb.nitumeeDb = client;
+}
+
+export function getDb(): Db {
+  globalForDb.nitumeeDb ??= postgres({
+    contract,
+    url: process.env.DATABASE_URL,
   });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  return globalForDb.nitumeeDb;
+}

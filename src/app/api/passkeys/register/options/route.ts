@@ -1,5 +1,5 @@
 import { generateRegistrationOptions } from "@simplewebauthn/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { currentUser, setChallenge, webauthnContext } from "@/lib/auth";
 
 export async function POST() {
@@ -7,7 +7,7 @@ export async function POST() {
   if (!user) return Response.json({ error: "Sign in first." }, { status: 401 });
 
   const { rpID, rpName } = await webauthnContext();
-  const existing = await prisma.webAuthnCredential.findMany({ where: { userId: user.id } });
+  const existing = await getDb().orm.public.WebAuthnCredential.where({ userId: user.id }).all();
 
   const options = await generateRegistrationOptions({
     rpName,

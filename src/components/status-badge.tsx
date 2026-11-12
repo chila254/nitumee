@@ -1,4 +1,6 @@
-import type { BookingStatus } from "@/generated/prisma/enums";
+import type { Models } from "@/prisma/contract";
+
+type BookingStatus = Models.public_Booking["status"];
 
 const styles: Record<BookingStatus, string> = {
   pending: "bg-amber-100 text-amber-800",

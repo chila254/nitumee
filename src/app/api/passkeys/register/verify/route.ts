@@ -1,6 +1,6 @@
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { clearChallenge, currentUser, readChallenge, webauthnContext } from "@/lib/auth";
 
 type Pending = { kind: "register"; challenge: string; userId: string };
@@ -36,9 +36,7 @@ export async function POST(request: Request) {
   }
 
   const { credential } = verified.registrationInfo;
-  await prisma.webAuthnCredential.upsert({
-    where: { id: credential.id },
-    update: {},
+  await getDb().orm.public.WebAuthnCredential.upsert({
     create: {
       id: credential.id,
       userId: user.id,
@@ -47,6 +45,7 @@ export async function POST(request: Request) {
       transports: credential.transports ?? [],
       deviceName: body.deviceName?.trim().slice(0, 60) || "Passkey",
     },
+    update: {},
   });
 
   await clearChallenge();

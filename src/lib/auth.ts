@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
-import { prisma } from "@/lib/db";
+import { io } from "next/cache";
+import { getDb } from "@/lib/db";
 
 export const SESSION_COOKIE = "n_session";
 export const CHALLENGE_COOKIE = "n_challenge";
@@ -32,12 +34,15 @@ export async function startSession(userId: string) {
   if (jar.get(CHALLENGE_COOKIE)) jar.delete(CHALLENGE_COOKIE);
 }
 
-export async function currentUser() {
+export const currentUser = cache(async () => {
+  // Database clients mint per-query UUIDs; Next's prerender validator rejects
+  // those in the static shell, so mark the read as request-time IO first.
+  await io();
   const jar = await cookies();
   const id = jar.get(SESSION_COOKIE)?.value;
   if (!id) return null;
-  return prisma.user.findUnique({ where: { id }, include: { runnerProfile: true } });
-}
+  return getDb().orm.public.User.where({ id }).include("runnerProfile").first();
+});
 
 /** Creates or extends a short-lived cookie that ties a WebAuthn challenge to
  *  this browser; passkey add/sign-in must not depend on anything stored in

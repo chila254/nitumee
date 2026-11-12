@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { formatSlot } from "@/lib/slots";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -8,12 +8,13 @@ export default async function RunnerPage() {
   const user = await currentUser();
   if (!user) redirect("/login");
 
-  const bookings = await prisma.booking.findMany({
-    where: { status: { in: ["pending", "accepted"] }, slotStart: { gte: new Date() } },
-    orderBy: { slotStart: "asc" },
-    include: { customer: true },
-    take: 50,
-  });
+  const bookings = await getDb()
+    .orm.public.Booking.where((booking) => booking.status.in(["pending", "accepted"]))
+    .where((booking) => booking.slotStart.gte(new Date()))
+    .orderBy((booking) => booking.slotStart.asc())
+    .include("customer")
+    .limit(50)
+    .all();
 
   return (
     <div className="space-y-6">

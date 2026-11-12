@@ -1,6 +1,6 @@
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { clearChallenge, readChallenge, startSession, webauthnContext } from "@/lib/auth";
 
 type Pending = { kind: "login"; challenge: string };
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   // The credential owner is resolved from the authenticator's response id —
   // never from the request body — so one user cannot claim another's passkey.
-  const stored = await prisma.webAuthnCredential.findUnique({ where: { id: body.response.id } });
+  const stored = await getDb().orm.public.WebAuthnCredential.where({ id: body.response.id }).first();
   if (!stored) return Response.json({ error: "This passkey is not registered. Sign in with your password." }, { status: 401 });
 
   const { rpID, origin } = await webauthnContext();
@@ -39,13 +39,15 @@ export async function POST(request: Request) {
   }
   if (!verified.verified) return Response.json({ error: "Passkey check failed." }, { status: 401 });
 
-  await prisma.webAuthnCredential.update({
-    where: { id: stored.id },
-    data: { counter: verified.authenticationInfo.newCounter, lastUsedAt: new Date() },
-  });
+  await getDb()
+    .orm.public.WebAuthnCredential.where({ id: stored.id })
+    .update({ counter: verified.authenticationInfo.newCounter, lastUsedAt: new Date() });
   await clearChallenge();
   await startSession(stored.userId);
 
-  const user = await prisma.user.findUnique({ where: { id: stored.userId }, select: { role: true } });
+  const user = await getDb()
+    .orm.public.User.where({ id: stored.userId })
+    .select("role")
+    .first();
   return Response.json({ ok: true, redirectTo: user?.role === "runner" ? "/runner" : "/bookings" });
 }

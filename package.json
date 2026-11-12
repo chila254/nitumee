@@ -5,20 +5,20 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
-    "build": "prisma migrate deploy && next build",
-    "build:webpack": "prisma migrate deploy && next build --webpack",
+    "build": "prisma contract emit && prisma db migrate && next build",
+    "build:webpack": "prisma contract emit && prisma db migrate && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "db": "node scripts/pglite-server.cjs",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
-    "db:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "db:migrate": "prisma migration plan",
+    "db:deploy": "prisma db migrate",
+    "db:sign": "prisma db sign",
+    "db:verify": "prisma db verify",
+    "postinstall": "prisma contract emit"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",
-    "@prisma/adapter-pg": "^7.10.1",
-    "@prisma/client": "^7.10.1",
+    "@prisma/orm-postgres": "8.0.0-rc.23",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.3",
     "dotenv": "^18.0.10",
@@ -38,7 +38,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "playwright-core": "^1.65.0",
-    "prisma": "7.10.1",
+    "prisma": "8.0.0-rc.33",
     "tailwindcss": "4.3.3",
     "typescript": "^5"
   },

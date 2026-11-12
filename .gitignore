@@ -49,3 +49,10 @@ next-env.d.ts
 
 # allow the example env
 !.env.example
+
+# prisma orm 8 / composer local state
+.prisma/
+.prisma-composer/
+.alchemy/
+
+.qoder

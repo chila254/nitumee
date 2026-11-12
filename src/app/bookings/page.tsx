@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { formatSlot } from "@/lib/slots";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -10,12 +10,12 @@ export default async function BookingsPage() {
   if (!user) redirect("/login");
   if (user.role === "runner") redirect("/runner");
 
-  const bookings = await prisma.booking.findMany({
-    where: { customerId: user.id },
-    orderBy: { slotStart: "desc" },
-    include: { runner: { include: { user: true } } },
-    take: 50,
-  });
+  const bookings = await getDb()
+    .orm.public.Booking.where({ customerId: user.id })
+    .orderBy((booking) => booking.slotStart.desc())
+    .include("runner", (runner) => runner.include("user"))
+    .limit(50)
+    .all();
 
   return (
     <div className="space-y-6">

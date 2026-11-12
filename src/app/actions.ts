@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import {
   SESSION_COOKIE,
   currentUser,
@@ -23,7 +23,7 @@ const passwordSchema = z
   .max(200, "That password is too long.");
 
 async function emailTaken(email: string, exceptUserId?: string) {
-  const other = await prisma.user.findUnique({ where: { email } });
+  const other = await getDb().orm.public.User.where({ email }).first();
   return other != null && other.id !== exceptUserId;
 }
 
@@ -42,8 +42,11 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
   if (confirm !== password.data) return { error: "The two passwords do not match.", field: "confirm" };
   if (await emailTaken(email.data)) return { error: "An account with that email already exists. Sign in instead.", field: "email" };
 
-  const user = await prisma.user.create({
-    data: { name, email: email.data, phone, passwordHash: await hashPassword(password.data) },
+  const user = await getDb().orm.public.User.create({
+    name,
+    email: email.data,
+    phone,
+    passwordHash: await hashPassword(password.data),
   });
 
   await startSession(user.id);
@@ -55,7 +58,7 @@ export async function signIn(_prev: FormState, formData: FormData): Promise<Form
   const password = String(formData.get("password") ?? "");
   if (!email.success || password.length === 0) return { error: "Enter your email and password." };
 
-  const user = await prisma.user.findUnique({ where: { email: email.data } });
+  const user = await getDb().orm.public.User.where({ email: email.data }).first();
   // Same message for unknown email and wrong password so the form cannot be
   // used to discover which addresses have accounts.
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
@@ -76,7 +79,7 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
   if (name.length < 2) return { error: "Tell us your name so the runner can greet you.", field: "name" };
   if (!phone) return { error: "Enter a valid Kenyan number, e.g. 0712 345 678.", field: "phone" };
 
-  await prisma.user.update({ where: { id: user.id }, data: { name, phone } });
+  await getDb().orm.public.User.where({ id: user.id }).update({ name, phone });
   revalidatePath("/profile");
   revalidatePath("/book");
   return { ok: true };
@@ -85,7 +88,7 @@ export async function updateProfile(_prev: FormState, formData: FormData): Promi
 export async function removePasskey(id: string) {
   const user = await currentUser();
   if (!user) redirect("/login");
-  await prisma.webAuthnCredential.deleteMany({ where: { id, userId: user.id } });
+  await getDb().orm.public.WebAuthnCredential.where({ id, userId: user.id }).deleteAll();
   revalidatePath("/profile");
 }
 
@@ -141,28 +144,26 @@ export async function createBooking(_prev: FormState, payload: unknown): Promise
   }
 
   if (phone !== user.phone) {
-    await prisma.user.update({ where: { id: user.id }, data: { phone } });
+    await getDb().orm.public.User.where({ id: user.id }).update({ phone });
   }
 
-  const conflict = await prisma.booking.findFirst({
-    where: {
+  const conflict = await getDb()
+    .orm.public.Booking.where({
       customerId: user.id,
-      status: { not: "cancelled" },
       slotStart: bounds.start,
       slotEnd: bounds.end,
-    },
-  });
+    })
+    .where((booking) => booking.status.neq("cancelled"))
+    .first();
   if (conflict) return { error: "You already have a booking for that slot.", field: "slot" };
 
-  const booking = await prisma.booking.create({
-    data: {
-      customerId: user.id,
-      area: parsed.data.area,
-      slotStart: bounds.start,
-      slotEnd: bounds.end,
-      budgetKes: parsed.data.budget,
-      notes: parsed.data.notes,
-    },
+  const booking = await getDb().orm.public.Booking.create({
+    customerId: user.id,
+    area: parsed.data.area,
+    slotStart: bounds.start,
+    slotEnd: bounds.end,
+    budgetKes: parsed.data.budget,
+    notes: parsed.data.notes,
   });
 
   revalidatePath("/bookings");
@@ -174,14 +175,10 @@ export async function cancelBooking(id: string) {
   const user = await currentUser();
   if (!user) redirect("/login");
 
-  await prisma.booking.updateMany({
-    where: {
-      id,
-      customerId: user.id,
-      status: { in: ["pending", "accepted"] },
-    },
-    data: { status: "cancelled" },
-  });
+  await getDb()
+    .orm.public.Booking.where({ id, customerId: user.id })
+    .where((booking) => booking.status.in(["pending", "accepted"]))
+    .updateAll({ status: "cancelled" });
 
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${id}`);

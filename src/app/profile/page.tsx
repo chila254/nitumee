@@ -1,16 +1,16 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { ProfileForm } from "./profile-form";
 
 export default async function ProfilePage() {
   const user = await currentUser();
   if (!user) redirect("/login");
 
-  const passkeys = await prisma.webAuthnCredential.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const passkeys = await getDb()
+    .orm.public.WebAuthnCredential.where({ userId: user.id })
+    .orderBy((credential) => credential.createdAt.desc())
+    .all();
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
