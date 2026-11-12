@@ -27,6 +27,15 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.3.13
+      # A blank PRISMA_SERVICE_TOKEN overrides the OIDC exchange and fails with
+      # AUTH.SERVICE_TOKEN_EMPTY, so only export it when the secret is set.
+      - name: Export PRISMA_SERVICE_TOKEN when configured
+        env:
+          TOKEN: ${{ secrets.PRISMA_SERVICE_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "PRISMA_SERVICE_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          fi
       - uses: prisma/cloud-deploy-action@v1
         with:
           install-command: pnpm install --frozen-lockfile
