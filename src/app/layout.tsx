@@ -7,10 +7,42 @@ import { currentUser } from "@/lib/auth";
 // Session-aware header: render at request time instead of prerendering a shell.
 export const instant = false;
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
+const title = "Nitumee — Book a shopper, we shop for you";
+const description =
+  "Book a trusted runner to shop for you at the market or supermarket in Nairobi. Pick an area, a time slot and a budget.";
+
 export const metadata: Metadata = {
-  title: "Nitumee — Book a shopper, we shop for you",
-  description:
-    "Book a trusted runner to shop for you at the market or supermarket in Nairobi. Pick an area, a time slot and a budget.",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: "Nitumee",
+    locale: "en_KE",
+    type: "website",
+    images: [
+      {
+        url: "/images/og-nitumee.jpg",
+        width: 1200,
+        height: 630,
+        alt: "A Nitumee runner handing fresh groceries to a customer at a Nairobi market",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/og-nitumee.jpg"],
+  },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   acceptBooking,
@@ -173,7 +174,17 @@ export default async function RunnerPage() {
       <section className="space-y-3">
         <h2 className="font-semibold">Open runs in your areas</h2>
         {open.length === 0 ? (
-          <div className="card text-center text-stone-600">No open runs right now. Check back later.</div>
+          <div className="card flex items-center gap-4 text-stone-600">
+            <Image
+              src="/images/market-stall.webp"
+              alt="Fresh produce at a Nairobi market stall"
+              width={1000}
+              height={750}
+              sizes="112px"
+              className="h-20 w-28 shrink-0 rounded-xl object-cover"
+            />
+            <p>No open runs right now. Check back later.</p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {open.map((booking) => (

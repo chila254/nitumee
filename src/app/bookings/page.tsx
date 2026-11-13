@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
@@ -27,8 +28,16 @@ export default async function BookingsPage() {
       </div>
 
       {bookings.length === 0 ? (
-        <div className="card text-center text-stone-600">
-          <p className="mb-3">You have no bookings yet.</p>
+        <div className="card flex flex-col items-center gap-4 text-center text-stone-600">
+          <Image
+            src="/images/empty-basket.webp"
+            alt="An empty woven shopping basket on a kitchen table"
+            width={900}
+            height={675}
+            sizes="176px"
+            className="h-28 w-44 rounded-xl object-cover"
+          />
+          <p>Nothing in the basket yet — you have no bookings.</p>
           <Link href="/book" className="btn">
             Book your first shopping run
           </Link>

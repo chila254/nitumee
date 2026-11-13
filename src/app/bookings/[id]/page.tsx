@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { cancelBooking } from "@/app/actions";
@@ -85,6 +86,22 @@ export default async function BookingPage({ params }: PageProps<"/bookings/[id]"
           <h2 className="mb-1 text-sm text-stone-500">Your list</h2>
           <p className="whitespace-pre-wrap rounded-xl bg-stone-50 p-4 text-sm leading-relaxed">{booking.notes}</p>
         </div>
+        {booking.status === "delivered" && (
+          <div className="flex items-center gap-3 rounded-xl bg-teal-50 p-3 text-sm text-teal-900">
+            <Image
+              src="/images/grocery-bag.webp"
+              alt="A paper bag filled with fresh groceries"
+              width={800}
+              height={1200}
+              sizes="72px"
+              className="h-16 w-16 shrink-0 rounded-lg object-cover"
+            />
+            <p>
+              <strong>Delivered.</strong> We hope everything on your list arrived safely. Your receipt is with the
+              runner if you need to check anything.
+            </p>
+          </div>
+        )}
         {cancellable && (
           <form action={cancelBooking.bind(null, booking.id)}>
             <button className="btn-secondary !border-red-200 !text-red-700 hover:!bg-red-50">Cancel booking</button>
